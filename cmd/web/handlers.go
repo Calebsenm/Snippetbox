@@ -5,6 +5,8 @@ import (
     "net/http"
     "strconv"
     "html/template"
+    "github.com/calebsenm/snippetbox/internal/models"
+    "errors"
 )
 
 func (app *application) home(w http.ResponseWriter, r *http.Request ){
@@ -38,8 +40,19 @@ func (app *application) snippetView(w http.ResponseWriter , r *http.Request ){
         app.notFound(w)
         return 
     }
+    
+    snippet , err := app.snippets.Get(id);
+    
+    if err != nil {
+         if errors.Is(err, models.ErrNoRecord) {
+            app.notFound(w)
+        } else {
+            app.serveError(w, err)
+        }
+        return
+    }
 
-    fmt.Fprintf( w, "Display specific snippet with ID %d...", id );
+     fmt.Fprintf(w, "%+v", snippet);
 }
 
 func (app *application ) snippetCreate(w http.ResponseWriter , r *http.Request){
@@ -48,7 +61,17 @@ func (app *application ) snippetCreate(w http.ResponseWriter , r *http.Request){
         app.clientError(w , http.StatusMethodNotAllowed)
         return 
     }
-    w.Write([]byte("Create a new snippet... "));
-}
+   
+    title := "LOL"
+    content := "O LOL oooo LOL"
+    expires := 7
 
+    id , err := app.snippets.Insert(title , content , expires );
+    if err != nil {
+        app.serveError(w , err );
+        return 
+    }    
+    
+    http.Redirect(w , r ,fmt.Sprintf("/snippet/view?id=%d" , id),http.StatusSeeOther)
+}
 
