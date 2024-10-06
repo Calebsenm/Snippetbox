@@ -1,4 +1,4 @@
-- Page 90
+-- Page 130
 
 
 -- SQL for snippetbox 
@@ -61,5 +61,4 @@ GRAND SELCT , INSERT , UPDATE , DELETE ON snippetbox.* TO 'web'@'localhost';
 
 -- import: Make sure to swap 'pass' with password of your own choosing.
 ALTER USER 'web'@'localhost' IDENTIFIED BY 'pass';
-
 

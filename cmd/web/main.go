@@ -21,7 +21,7 @@ type application struct {
 func main(){
     
     addr := flag.String("addr", ":4000", "HTTP network address");
-    dns := flag.String("dns", "root:example@(127.0.0.1:3306)/snippetbox?parseTime=true", "MySQL data source name");
+    dns := flag.String("dns", "root:admin@(127.0.0.1:3306)/snippetbox?parseTime=true", "MySQL data source name");
 
     flag.Parse()
 
@@ -67,4 +67,5 @@ func openDB(dsn string) (*sql.DB, error) {
     }
     return db, nil
 }
+
 
