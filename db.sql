@@ -1,6 +1,3 @@
--- Page 130
-
-
 -- SQL for snippetbox 
 
 
