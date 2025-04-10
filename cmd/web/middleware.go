@@ -3,7 +3,35 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"context"
+	"github.com/justinas/nosurf"
 )
+
+func(app *application) authenticate(next http.Handler) http.Handler{ 
+    return http.HandlerFunc(func (w http.ResponseWriter, r *http.Request){
+        id := app.sessionManager.GetInt(r.Context(), "authenticatedUserID")
+        
+        if id == 0 {
+            next.ServeHTTP(w , r)
+            return 
+        }
+
+        exist , err := app.users.Exists(id);
+        
+        if err != nil {
+            app.serverError(w , err)
+            return 
+        }
+
+        if exist {
+            ctx := context.WithValue(r.Context() , isAuthenticatedContextKey , true )
+            r = r.WithContext(ctx)
+        } 
+
+        next.ServeHTTP(w , r )
+    })
+}
+
 
 func secureHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -28,7 +56,6 @@ func (app *application) logRequest(next http.Handler) http.Handler {
 	})
 }
 
-
 func (app *application) recoverPanic(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -41,28 +68,24 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 	})
 }
 
+func (app *application) requireAuthentication(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-// secureHeaders es un middleware que agrega encabezados de seguridad a las respuestas HTTP,
-// protegiendo contra ataques como inyección de contenido, clickjacking y robo de información.
-//
-// Los encabezados establecidos son:
-// - Content-Security-Policy: Define fuentes de contenido seguras.
-// - Referrer-Policy: Controla la información enviada en el encabezado Referer.
-// - X-Content-Type-Options: Previene que el navegador adivine el tipo de contenido.
-// - X-Frame-Options: Evita que la página se cargue en un iframe de otros sitios.
-// - X-XSS-Protection: Desactiva la protección XSS en los navegadores.
-//
-// Después de configurar estos encabezados, la solicitud se pasa al siguiente handler.
+		if !app.isAuthenticated(r) {
+			http.Redirect(w, r, "/user/login", http.StatusSeeOther)
+			return
+		}
+	})
+}
 
+func noSurf(next http.Handler) http.Handler {
 
-// logRequest es un middleware que registra información sobre cada solicitud HTTP,
-// incluyendo la dirección remota del cliente, el protocolo, el método y la URI solicitada.
-// Después de registrar los detalles, pasa la solicitud al siguiente handler en la cadena.
-// 
-// INFO    2025/01/08 10:28:09 [::1]:59838 - HTTP/1.1 GET /
+	csrfHandler := nosurf.New(next)
+	csrfHandler.SetBaseCookie(http.Cookie{
+		HttpOnly: true,
+		Path:     "/",
+		Secure:   true,
+	})
 
-
-// recoverPanic es un middleware que maneja pánicos en las solicitudes HTTP.
-// Si ocurre un pánico durante la ejecución de la solicitud, lo captura,
-// cierra la conexión y responde con un error 500 utilizando el método serverError.
-// Después de manejar cualquier pánico, pasa la solicitud al siguiente handler.
+	return csrfHandler
+}
