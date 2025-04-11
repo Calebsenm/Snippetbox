@@ -4,4 +4,3 @@ This is the code from the Book: Let´s Go Learn to build professional web applic
 
 Go 1.20 
 
-342 Logout
